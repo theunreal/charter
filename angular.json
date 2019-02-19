@@ -28,8 +28,7 @@
               "src/styles.css"
             ],
             "scripts": [
-              "./node_modules/chart.js/dist/Chart.bundle.js",
-              "src/assets/chartjs-plugin-annotation.js"
+              "./node_modules/chart.js/dist/Chart.bundle.js"
             ]
           },
           "configurations": {
