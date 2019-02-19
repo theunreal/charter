@@ -1,20 +1,75 @@
-<!--The content below is only a placeholder and can be replaced.-->
-<div style="text-align:center">
-  <h1>
-    Welcome to {{ title }}!
-  </h1>
-  <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-</div>
-<h2>Here are some links to help you start: </h2>
-<ul>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://github.com/angular/angular-cli/wiki">CLI Documentation</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-  </li>
-</ul>
+<mat-toolbar color="primary">
+  Charter
+</mat-toolbar>
 
+<section class="main">
+
+  <mat-drawer-container>
+    <mat-drawer class="sidenav"
+                opened
+                mode="side">
+
+      <form [formGroup]="filterFormGroup" *ngIf="loaded">
+
+        <mat-form-field>
+          <mat-select placeholder="Chart Type"
+                      formControlName="currentChartType"
+                      (selectionChange)="chartTypeChange($event)"
+          >
+            <mat-option *ngFor="let type of supportedChartTypes"
+                        [value]="type">
+              {{type}}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
+          <input matInput
+                 formControlName="threshold"
+                 placeholder="Threshold"
+                 type="number"
+                 [step]="thresholdInputStep"
+                 min="0"
+          >
+        </mat-form-field>
+
+        <mat-form-field>
+          <input matInput
+                 formControlName="numDataPoints"
+                 placeholder="# Data Points"
+                 type="number"
+                 step="1"
+                 min="1"
+          >
+          <mat-hint *ngIf="!error">
+            Max: {{this[filterFormGroup.controls.currentChartType.value]?.labels?.length}}
+          </mat-hint>
+        </mat-form-field>
+      </form>
+
+    </mat-drawer>
+
+    <mat-progress-bar *ngIf="!loaded" mode="indeterminate"></mat-progress-bar>
+
+    <section class="sidenav-content">
+      <div class="container">
+
+        <mat-card *ngIf="!error">
+          <mat-card-title>{{filterFormGroup.controls.currentChartType.value}}</mat-card-title>
+          <mat-card-content class="ptop">
+            <canvas id="canvas" height="450px"></canvas>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card *ngIf="loaded && error">
+          <mat-card-title>OOPS.. Something went wrong.</mat-card-title>
+          <mat-card-content>
+            {{error}}
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+
+  </mat-drawer-container>
+
+</section>

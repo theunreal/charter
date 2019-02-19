@@ -3,7 +3,11 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  APIS: {
+    STOCK: `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY`,
+    POPULATION: 'http://api.population.io/1.0/population'
+  }
 };
 
 /*
