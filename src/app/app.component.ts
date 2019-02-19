@@ -3,7 +3,7 @@ import {DataProviderService} from './data-provider.service';
 import {Chart} from 'chart.js';
 import {FormControl, FormGroup} from '@angular/forms';
 import {debounceTime, filter, takeUntil} from 'rxjs/operators';
-import {MatSelectChange, MatSnackBar} from '@angular/material';
+import {MatSnackBar} from '@angular/material';
 import {Subject} from 'rxjs';
 
 @Component({
@@ -17,14 +17,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   error: any;
 
   filterFormGroup: FormGroup = new FormGroup({
-    threshold: new FormControl({value: 108, disabled: this.error}), // Default threshold value
-    numDataPoints: new FormControl({value: 10, disabled: this.error}), // Default number of chart points
+    threshold: new FormControl({value: 108.5, disabled: this.error}), // Default threshold value
+    numDataPoints: new FormControl({value: 20, disabled: this.error}), // Default number of chart points
     currentChartType: new FormControl(this.supportedChartTypes[0]) // Default chart type
   });
 
   chartElement: Chart = null;
-  stockChart: Charter;
-  populationChart: Charter;
+  CHARTS = {
+    stockChart: null,
+    populationChart: null
+  };
 
   thresholdExceededColor = 'red';
   naturalThresholdColor = 'green';
@@ -52,12 +54,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             const currentChartType = this.filterFormGroup.controls.currentChartType.value;
             datasets[this.thresholdSetIndex].data = Array(datasets[this.thresholdSetIndex].data.length)
               .fill(threshold);
-            datasets[0].pointBackgroundColor = this[currentChartType].data
+            datasets[0].pointBackgroundColor = this.CHARTS[currentChartType].data
               .map((value) => value > this.filterFormGroup.controls.threshold.value ?
                 this.thresholdExceededColor :
                 this.naturalThresholdColor);
             this.chartElement.update();
-            this.chartElement.resize();
           });
       });
 
@@ -72,8 +73,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
         // Can also be optimized to be changed without re-rendering the chart DOM
         this.buildChart(
-          this[currentChart].labels,
-          this[currentChart].data,
+          this.CHARTS[currentChart].labels,
+          this.CHARTS[currentChart].data,
           dataPoints
         );
       });
@@ -88,14 +89,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     switch (chartType) {
       case 'stockChart':
-        if (!this.stockChart) { // Simple caching for api data until the user exit the page
-          this.stockChart = await this.dataProviderService.getStockData();
+        if (!this.CHARTS.stockChart) { // Simple caching for api data until the user exit the page
+          this.CHARTS.stockChart = await this.dataProviderService.getStockData();
         }
         this.thresholdInputStep = 0.1;
         break;
       case 'populationChart':
-        if (!this.populationChart) { // Simple caching for api data until the user exit the page
-          this.populationChart = await this.dataProviderService.getPopulationData();
+        if (!this.CHARTS.populationChart) { // Simple caching for api data until the user exit the page
+          this.CHARTS.populationChart = await this.dataProviderService.getPopulationData();
         }
         this.thresholdInputStep = 10e3;
         break;
@@ -104,7 +105,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
     }
 
-      if (!this[chartType]) {
+      if (!this.CHARTS[chartType]) {
         this.loaded = true;
         this.error = 'Unable to parse data from the server. Please check the server.';
         this.filterFormGroup.controls.threshold.disable();
@@ -137,8 +138,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
    * @param data - chart Y axis
    * @param maxDataPoints - maximum count of points to show
    */
-  buildChart(labels: string[] = this[this.filterFormGroup.controls.currentChartType.value].labels,
-             data: number[] = this[this.filterFormGroup.controls.currentChartType.value].data,
+  buildChart(labels: string[] = this.CHARTS[this.filterFormGroup.controls.currentChartType.value].labels,
+             data: number[] = this.CHARTS[this.filterFormGroup.controls.currentChartType.value].data,
              maxDataPoints: number = this.filterFormGroup.controls.numDataPoints.value): void {
 
     if (labels.length > maxDataPoints) {
@@ -146,23 +147,37 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       data = data.slice(0, maxDataPoints);
     }
 
+    const label = this.getDatasetLabel();
+
+    // Mark points that exceeds the threshold
+    const pointBackgroundColor = data
+      .map((value) => value > this.filterFormGroup.controls.threshold.value ?
+        this.thresholdExceededColor :
+        this.naturalThresholdColor);
+
+    // Just update the chart if the chart element already exists
+    if (this.chartElement) {
+      this.chartElement.data.labels = labels;
+      // Update the object without overwriting current fields
+      this.chartElement.data.datasets[0] = { ...this.chartElement.data.datasets[0], data, label, pointBackgroundColor };
+      this.chartElement.data.datasets[1].data = data.map(() => this.filterFormGroup.controls.threshold.value);
+      this.chartElement.update();
+      return;
+    }
+
+    // Create a new chart
     this.chartElement = new Chart('canvas', {
         type: 'line',
         data: {
           labels,
           datasets: [
             {
-              label: this.filterFormGroup.controls.currentChartType.value === 'stockChart' ?
-                'Close Price' :
-                `Total Population (${this.dataProviderService.populationCountry})`,
+              label,
               data,
               borderColor: '#3F51B5',
               backgroundColor: '#ffffff',
               fill: false,
-              pointBackgroundColor: data
-                .map((value) => value > this.filterFormGroup.controls.threshold.value ?
-                  this.thresholdExceededColor :
-                  this.naturalThresholdColor)
+              pointBackgroundColor
             }, {
               label: 'Threshold',
               data: data.map(() => this.filterFormGroup.controls.threshold.value),
@@ -198,11 +213,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.filterFormGroup.controls.numDataPoints.enable();
       }
     }
+
+    private getDatasetLabel() {
+      return this.filterFormGroup.controls.currentChartType.value === 'stockChart' ?
+        'Close Price' :
+        `Total Population (${this.dataProviderService.populationCountry})`;
+    }
 }
 
 type ChartType = 'stockChart' | 'populationChart';
 interface Charter {
   labels: string[];
   data: number[];
-  filteredData: number[];
 }

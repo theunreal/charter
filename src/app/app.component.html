@@ -42,7 +42,7 @@
                  min="1"
           >
           <mat-hint *ngIf="!error">
-            Max: {{this[filterFormGroup.controls.currentChartType.value]?.labels?.length}}
+            Max: {{CHARTS[filterFormGroup.controls.currentChartType.value]?.labels?.length}}
           </mat-hint>
         </mat-form-field>
       </form>
